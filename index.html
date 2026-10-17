@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light" data-accent="ungu">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>UangKu — Pencatat Keuangan</title>
+<meta id="meta-theme" name="theme-color" content="#eef2f7" />
+<link rel="manifest" href="manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: { sans: ['-apple-system','SF Pro Text','Inter','system-ui','sans-serif'] } } } }
+</script>
+<link rel="stylesheet" href="style.css" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="ios-bg">
+
+<div class="aurora" aria-hidden="true">
+  <span class="a1"></span><span class="a2"></span><span class="a3"></span><span class="a4"></span>
+</div>
+
+<!-- ============ AUTH SCREEN (Login/Register) ============ -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-wrap">
+    <div class="auth-header">
+      <span class="brand-mark">U</span>
+      <h1>UangKu</h1>
+      <p>Pencatat Keuangan - Sync Cloud</p>
+    </div>
+    
+    <div class="glass auth-card">
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab active">Masuk</button>
+        <button id="tab-register" class="auth-tab">Daftar</button>
+      </div>
+      
+      <!-- Form Login -->
+      <form id="form-login" class="auth-form">
+        <label class="field-label">Email</label>
+        <input id="login-email" type="email" placeholder="nama@email.com" class="ios-input" required />
+        
+        <label class="field-label">Password</label>
+        <input id="login-password" type="password" placeholder="Min. 6 karakter" class="ios-input" required />
+        
+        <p id="login-error" class="auth-error"></p>
+        
+        <button type="submit" id="btn-login" class="ios-btn">
+          <span class="btn-label">Masuk</span>
+        </button>
+      </form>
+      
+      <!-- Form Register -->
+      <form id="form-register" class="auth-form" style="display:none">
+        <label class="field-label">Email</label>
+        <input id="register-email" type="email" placeholder="nama@email.com" class="ios-input" required />
+        
+        <label class="field-label">Password</label>
+        <input id="register-password" type="password" placeholder="Min. 6 karakter" class="ios-input" required />
+        
+        <label class="field-label">Konfirmasi Password</label>
+        <input id="register-password2" type="password" placeholder="Ketik ulang password" class="ios-input" required />
+        
+        <p id="register-error" class="auth-error"></p>
+        
+        <button type="submit" id="btn-register" class="ios-btn">
+          <span class="btn-label">Daftar</span>
+        </button>
+      </form>
+      
+      <div class="auth-divider">atau</div>
+      
+      <button id="btn-offline" class="ios-btn-ghost">Pakai Mode Offline</button>
+      <p class="auth-note">Mode offline: data hanya tersimpan di perangkat ini</p>
+    </div>
+    
+    <div id="migration-modal" class="migration-modal" style="display:none">
+      <div class="glass migration-card">
+        <h2 class="section-title">Data Lokal Terdeteksi</h2>
+        <p class="migration-info">Ditemukan <strong id="migration-count"></strong> di perangkat ini.</p>
+        <p class="migration-info">Upload ke cloud agar bisa diakses dari perangkat lain?</p>
+        
+        <button id="btn-upload-data" class="ios-btn">Upload ke Cloud</button>
+        <button id="btn-skip-upload" class="ios-btn-ghost">Lewati (Hapus Data Lokal)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="phone-wrap" id="main-app" style="display:none">
+
+  <!-- ============ BERANDA ============ -->
+  <div id="page-beranda" class="page active">
+    <header class="glass liquid-hero">
+      <div class="flex items-center justify-between">
+        <div class="brand">
+          <span class="brand-mark">U</span>
+          <div>
+            <p class="brand-name">UangKu</p>
+            <p class="brand-sub">Pencatat Keuangan</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="btn-theme" class="theme-toggle" aria-label="Ganti mode siang/malam">
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none"/>
+              <path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19"/>
+            </svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.4 14.2A8.5 8.5 0 0 1 9.8 3.6a.7.7 0 0 0-.9-.9 10.2 10.2 0 1 0 12.4 12.4.7.7 0 0 0-.9-.9z"/>
+            </svg>
+          </button>
+          <span class="live-pill"><span class="live-dot"></span>Live</span>
+        </div>
+      </div>
+      <div class="hero-balance-row">
+        <div class="hero-saldo">
+          <p class="hero-label">Total Saldo &middot; semua dompet</p>
+          <p id="total-saldo" class="balance-value">Rp 0</p>
+        </div>
+        <div class="donut-wrap" title="Porsi pengeluaran minggu ini">
+          <svg class="donut" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="26" class="donut-bg"/>
+            <circle id="donut-fg" cx="32" cy="32" r="26" class="donut-fg" transform="rotate(-90 32 32)"/>
+          </svg>
+          <div class="donut-center"><p id="donut-pct">0%</p><span>keluar</span></div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        <div class="mini-stat">
+          <p class="mini-label">Pemasukan</p>
+          <p id="total-masuk" class="mini-value text-emerald-600">Rp 0</p>
+        </div>
+        <div class="mini-stat">
+          <p class="mini-label">Pengeluaran</p>
+          <p id="total-keluar" class="mini-value text-rose-500">Rp 0</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="glass">
+      <h2 class="section-title">Transaksi Baru</h2>
+      <label class="field-label">Nominal (Rp)</label>
+      <input id="in-nominal" type="number" inputmode="numeric" min="1" placeholder="50000" class="ios-input" />
+      <label class="field-label">Jenis</label>
+      <div class="seg" id="seg-jenis">
+        <button type="button" data-val="masuk" class="seg-btn active">Masuk</button>
+        <button type="button" data-val="keluar" class="seg-btn">Keluar</button>
+      </div>
+      <select id="in-jenis" class="hidden">
+        <option value="masuk">Pemasukan</option>
+        <option value="keluar">Pengeluaran</option>
+      </select>
+      <label class="field-label">Dompet</label>
+      <select id="in-dompet" class="ios-input"></select>
+      <label class="field-label">Metode pembayaran</label>
+      <div class="seg" id="seg-bayar">
+        <button type="button" data-val="cash" class="seg-btn active">Cash</button>
+        <button type="button" data-val="debit" class="seg-btn">Debit</button>
+        <button type="button" data-val="qris" class="seg-btn">QRIS</button>
+      </div>
+      <select id="in-bayar" class="hidden">
+        <option value="cash">Cash</option>
+        <option value="debit">Debit</option>
+        <option value="qris">QRIS</option>
+      </select>
+      <label class="field-label">Keterangan</label>
+      <input id="in-ket" type="text" maxlength="60" placeholder="Orderan, bensin, top up" class="ios-input" />
+      <button id="btn-simpan" class="ios-btn"><span class="btn-label">Simpan Transaksi</span></button>
+    </section>
+
+    <section class="glass">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="section-title mb-0">Riwayat</h2>
+        <button id="btn-hapus" class="link-danger">Hapus semua</button>
+      </div>
+      <p class="swipe-hint">Geser kartu ke kiri untuk menghapus satu transaksi.</p>
+      <div id="riwayat" class="history-list"></div>
+      <p id="riwayat-kosong" class="empty-note">Belum ada transaksi. Catat transaksi pertama Anda di atas.</p>
+    </section>
+  </div>
+
+  <!-- ============ STATISTIK ============ -->
+  <div id="page-statistik" class="page">
+    <section class="glass">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="section-title mb-0">Statistik 7 Hari</h2>
+        <span class="legend"><i class="dot-in"></i>Masuk<i class="dot-out"></i>Keluar</span>
+      </div>
+      <canvas id="chart-7d" class="chart"></canvas>
+      <div class="grid grid-cols-3 gap-2 mt-3">
+        <div class="stat-box">
+          <p class="stat-label">Masuk</p>
+          <p id="stat-7d-masuk" class="stat-val text-emerald-600">Rp 0</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-label">Keluar</p>
+          <p id="stat-7d-keluar" class="stat-val text-rose-500">Rp 0</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-label">Bersih</p>
+          <p id="stat-7d-bersih" class="stat-val">Rp 0</p>
+        </div>
+      </div>
+    </section>
+    <section class="glass">
+      <h2 class="section-title">Ringkasan Dompet</h2>
+      <div id="stat-dompet" class="wallet-list"></div>
+    </section>
+  </div>
+
+  <!-- ============ DOMPET ============ -->
+  <div id="page-dompet" class="page">
+    <section class="glass">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="section-title mb-0">Dompet Saya</h2>
+        <span id="dompet-count" class="count-pill">0</span>
+      </div>
+      <div id="dompet-list" class="wallet-list"></div>
+      <p id="dompet-kosong" class="empty-note">Belum ada dompet. Tambahkan dompet pertama Anda di bawah.</p>
+      <div class="wallet-add">
+        <label class="field-label">Nama dompet</label>
+        <input id="w-nama" type="text" maxlength="30" placeholder="BCA, GoPay, OVO, Cash" class="ios-input" />
+        <div class="grid grid-cols-2 gap-2 mt-2">
+          <div>
+            <label class="field-label">Tipe</label>
+            <select id="w-tipe" class="ios-input">
+              <option value="bank">Bank</option>
+              <option value="emoney">E-Money</option>
+              <option value="cash">Cash</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Saldo awal (bisa minus)</label>
+            <input id="w-saldo" type="number" inputmode="numeric" placeholder="-50000" class="ios-input" />
+          </div>
+        </div>
+        <label class="field-label">Ikon</label>
+        <select id="w-icon" class="ios-input">
+          <option value="auto">Otomatis (huruf depan)</option>
+          <option value="bank">Bank (B)</option>
+          <option value="kartu">Kartu (K)</option>
+          <option value="tunai">Tunai (T)</option>
+          <option value="digital">Digital (D)</option>
+        </select>
+        <label class="field-label">Warna</label>
+        <div class="swatches" id="w-warna">
+          <button type="button" data-c="#4f46e5" class="sw active" style="--sw:#4f46e5" aria-label="Ungu"></button>
+          <button type="button" data-c="#0891b2" class="sw" style="--sw:#0891b2" aria-label="Toska"></button>
+          <button type="button" data-c="#059669" class="sw" style="--sw:#059669" aria-label="Hijau"></button>
+          <button type="button" data-c="#ea580c" class="sw" style="--sw:#ea580c" aria-label="Oranye"></button>
+          <button type="button" data-c="#db2777" class="sw" style="--sw:#db2777" aria-label="Pink"></button>
+          <button type="button" data-c="#475569" class="sw" style="--sw:#475569" aria-label="Abu"></button>
+        </div>
+        <button id="btn-dompet" class="ios-btn-ghost">Tambah Dompet</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ LAINNYA ============ -->
+  <div id="page-lainnya" class="page">
+    <section class="glass">
+      <h2 class="section-title">Tema Warna</h2>
+      <p class="backup-note">Pilihan tersimpan otomatis di HP ini.</p>
+      <div class="accent-row" id="accent-row">
+        <button type="button" data-a="ungu" class="accent-btn active"><i style="--sw:#4f46e5"></i>Ungu</button>
+        <button type="button" data-a="hijau" class="accent-btn"><i style="--sw:#059669"></i>Hijau</button>
+        <button type="button" data-a="biru" class="accent-btn"><i style="--sw:#2563eb"></i>Biru</button>
+        <button type="button" data-a="oranye" class="accent-btn"><i style="--sw:#ea580c"></i>Oranye</button>
+      </div>
+    </section>
+    <section class="glass">
+      <h2 class="section-title">Akun & Sinkronisasi</h2>
+      <div id="account-info" class="account-info">
+        <p class="account-email"></p>
+        <p class="account-status">Status: <span id="sync-status">Online</span></p>
+      </div>
+      <button id="btn-sync-now" class="ios-btn-ghost">Sinkronkan Sekarang</button>
+      <button id="btn-logout" class="ios-btn-ghost logout-btn">Keluar</button>
+    </section>
+    <section class="glass">
+      <h2 class="section-title">Cadangan Data</h2>
+      <p class="backup-note">Unduh salinan sebagai pengaman jika ganti HP atau ikon terhapus.</p>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-export" class="ios-btn-ghost">Unduh Backup</button>
+        <button id="btn-import" class="ios-btn-ghost">Pulihkan</button>
+      </div>
+      <input id="file-import" type="file" accept="application/json,.json" class="hidden" />
+      <p id="backup-info" class="backup-info"></p>
+    </section>
+    <footer class="text-center text-[11px] mt-2 pb-6 footer-note">UangKu PWA &middot; data sync ke cloud</footer>
+  </div>
+
+</div>
+
+<nav class="bottom-nav" aria-label="Navigasi utama">
+  <button data-page="page-beranda" class="nav-btn active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+    <span>Beranda</span>
+  </button>
+  <button data-page="page-statistik" class="nav-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+    <span>Statistik</span>
+  </button>
+  <button data-page="page-dompet" class="nav-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="3"/><path d="M16 12.5h5v3h-5a1.5 1.5 0 0 1 0-3z" fill="currentColor" stroke="none"/></svg>
+    <span>Dompet</span>
+  </button>
+  <button data-page="page-lainnya" class="nav-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>
+    <span>Lainnya</span>
+  </button>
+</nav>
+
+<div id="save-toast" class="save-toast">Tersimpan</div>
+
+<!-- Load scripts in order -->
+<script src="supabase-client.js"></script>
+<script src="auth.js"></script>
+<script src="sync.js"></script>
+<script src="app.js"></script>
+<script src="app-init.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body>
+</html>
